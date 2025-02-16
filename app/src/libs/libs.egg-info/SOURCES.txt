@@ -1,0 +1,7 @@
+setup.py
+libs/libs.egg-info/PKG-INFO
+libs/libs.egg-info/SOURCES.txt
+libs/libs.egg-info/dependency_links.txt
+libs/libs.egg-info/top_level.txt
+libs/printer/__init__.py
+libs/printer/printer.py
