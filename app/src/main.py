@@ -1,3 +1,2 @@
-import libs
+import libs.some_module
 
-print('hgello')
