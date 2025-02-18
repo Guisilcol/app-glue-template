@@ -7,7 +7,7 @@ module "glue_job" {
   app_folder  = "s3://${var.source_code_bucket}/${var.source_code_folder_key}"
   main_script = var.source_code_main_file_key
 
-  dpu            = 1
+  dpu            = var.dpu
   python_version = "3"
   max_retries    = 0
   temp_dir       = "s3://${var.source_code_bucket}/temp"

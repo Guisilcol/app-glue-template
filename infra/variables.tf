@@ -50,5 +50,10 @@ variable "glue_role_arn" {
   type        = string
 }
 
+variable "dpu" {
+  description = "Number of DPUs to allocate to the Glue Job"
+  type        = number
+}
+
 
 
