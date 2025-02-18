@@ -8,9 +8,19 @@ variable "role_arn" {
   type        = string
 }
 
-variable "script_location" {
-  description = "The S3 location of the Python script for the Glue Job"
+variable "app_folder" {
+  description = "The S3 path location of the folder of Python script for the Glue Job"
   type        = string
+}
+
+variable "main_script" {
+  description = "the key name from the value passed in 'app_folder'"
+  type        = string
+}
+
+variable "dpu" {
+  description = "The number of DPUs to allocate for the Glue Job. Valid numbers: 0.0625 or 1"
+  type        = number
 }
 
 variable "python_version" {
