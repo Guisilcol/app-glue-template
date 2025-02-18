@@ -12,4 +12,8 @@ module "glue_job" {
   max_retries    = 0
   temp_dir       = "s3://${var.source_code_bucket}/temp"
   default_arguments = {}
+
+  source_code_bucket     = var.source_code_bucket
+  source_code_folder_key = var.source_code_folder_key
+  app_local_path         = "./../app"
 }

@@ -45,3 +45,19 @@ variable "default_arguments" {
   type        = map(string)
   default     = {}
 }
+
+variable "app_local_path" {
+  description = "Caminho local para a pasta app a ser enviada ao S3"
+  type        = string
+  default     = "../../../app"  # ajuste conforme sua estrutura
+}
+
+variable "source_code_bucket" {
+  description = "S3 bucket onde a pasta da aplicação será armazenada"
+  type        = string
+}
+
+variable "source_code_folder_key" {
+  description = "Chave (path) dentro do bucket para a pasta da aplicação"
+  type        = string
+}
