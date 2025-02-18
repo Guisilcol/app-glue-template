@@ -20,3 +20,4 @@ source_code_main_file_key   = "main.py"
 
 glue_job_name               = "my-dev-glue-job"
 glue_role_arn               = "arn:aws:iam::058264288790:role/GeneralPipelineGlueRole"
+dpu                         = 1
