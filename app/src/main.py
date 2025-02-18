@@ -1,2 +1,3 @@
-import libs.some_module
+from libs.some_module.some_file import some_function
 
+some_function()
