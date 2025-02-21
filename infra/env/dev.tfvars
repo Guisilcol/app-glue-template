@@ -3,8 +3,6 @@
 #########################
 
 aws_region                  = "us-east-1"
-backend_bucket              = "bucket-tfstates-dev"
-backend_key                 = "terraform.tfstate"
 
 ####################################
 # Source code bucket configuration #
