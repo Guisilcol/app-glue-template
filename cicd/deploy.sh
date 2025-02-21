@@ -53,15 +53,15 @@ echo "CICD: Limpeza concluída."
 # Integração com o Git
 ##############################
 
-# Garante que as branches 'dev' e 'main' existam; se não existirem, cria-as
+# Garante que as branches 'dev' e 'master' existam; se não existirem, cria-as
 if ! git show-ref --verify --quiet refs/heads/dev; then
     echo "CICD: A branch 'dev' não existe. Criando a branch 'dev'..."
     git branch dev
 fi
 
-if ! git show-ref --verify --quiet refs/heads/main; then
-    echo "CICD: A branch 'main' não existe. Criando a branch 'main'..."
-    git branch main
+if ! git show-ref --verify --quiet refs/heads/master; then
+    echo "CICD: A branch 'master' não existe. Criando a branch 'master'..."
+    git branch master
 fi
 
 # Obtém o nome da branch atual
@@ -69,9 +69,9 @@ current_branch=$(git rev-parse --abbrev-ref HEAD)
 echo "CICD: Branch atual: $current_branch"
 
 if [ "$env" == "dev" ]; then
-    # Para deploy no ambiente dev, a branch atual NÃO deve ser 'dev' nem 'main'
-    if [ "$current_branch" == "dev" ] || [ "$current_branch" == "main" ]; then
-        echo "CICD: Erro: Para deploy no ambiente dev, a branch atual deve ser diferente de 'dev' ou 'main'."
+    # Para deploy no ambiente dev, a branch atual NÃO deve ser 'dev' nem 'master'
+    if [ "$current_branch" == "dev" ] || [ "$current_branch" == "master" ]; then
+        echo "CICD: Erro: Para deploy no ambiente dev, a branch atual deve ser diferente de 'dev' ou 'master'."
         exit 1
     fi
 
@@ -84,16 +84,16 @@ if [ "$env" == "dev" ]; then
     git checkout "$current_branch"
 
 elif [ "$env" == "prd" ]; then
-    # Para deploy no ambiente prd (produção/main), a branch atual deve ser 'dev'
+    # Para deploy no ambiente prd (produção/master), a branch atual deve ser 'dev'
     if [ "$current_branch" != "dev" ]; then
-        echo "CICD: Erro: Para deploy no ambiente prd (main), a branch atual deve ser 'dev'."
+        echo "CICD: Erro: Para deploy no ambiente prd (master), a branch atual deve ser 'dev'."
         exit 1
     fi
 
-    echo "CICD: Realizando merge da branch 'dev' na branch 'main'..."
-    git checkout main
-    git merge dev --no-ff -m "Merge da branch 'dev' para deploy em produção (main)"
-    git push origin main
+    echo "CICD: Realizando merge da branch 'dev' na branch 'master'..."
+    git checkout master
+    git merge dev --no-ff -m "Merge da branch 'dev' para deploy em produção (master)"
+    git push origin master
     
     # Retorna para a branch 'dev' (opcional)
     git checkout dev
