@@ -53,20 +53,30 @@ echo "CICD: Limpeza concluída."
 # Integração com o Git
 ##############################
 
-# Garante que as branches 'dev' e 'master' existam; se não existirem, cria-as
+# Garante que as branches 'dev' e 'master' existam; se não existirem, cria-as e publica automaticamente
 if ! git show-ref --verify --quiet refs/heads/dev; then
     echo "CICD: A branch 'dev' não existe. Criando a branch 'dev'..."
     git branch dev
+    echo "CICD: Publicando a branch 'dev'..."
+    git push -u origin dev
 fi
 
 if ! git show-ref --verify --quiet refs/heads/master; then
     echo "CICD: A branch 'master' não existe. Criando a branch 'master'..."
     git branch master
+    echo "CICD: Publicando a branch 'master'..."
+    git push -u origin master
 fi
 
 # Obtém o nome da branch atual
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 echo "CICD: Branch atual: $current_branch"
+
+# Verifica se a branch atual já está publicada no repositório remoto; se não, publica-a automaticamente
+if ! git ls-remote --heads origin "$current_branch" > /dev/null 2>&1; then
+    echo "CICD: A branch '$current_branch' não está publicada no repositório remoto. Publicando..."
+    git push -u origin "$current_branch"
+fi
 
 if [ "$env" == "dev" ]; then
     # Para deploy no ambiente dev, a branch atual NÃO deve ser 'dev' nem 'master'
