@@ -7,18 +7,6 @@ variable "aws_region" {
 }
 
 ##############################
-# Backend Variables          #
-##############################
-variable "backend_bucket" {
-  description = "Name of the S3 bucket where the Terraform state will be stored"
-  type        = string
-}
-
-variable "backend_key" {
-  description = "S3 key (path) for the Terraform state file within the bucket"
-  type        = string
-}
-##############################
 # Source code variables      #
 ##############################
 
