@@ -103,5 +103,5 @@ fi
 # Deploy via Terraform
 ##############################
 echo "CICD: Inicializando e aplicando o Terraform para o ambiente '$env'..."
-terraform -chdir=infra init -backend-config="env/${env}.backend.config"
+terraform -chdir=infra init -reconfigure -backend-config="env/${env}.backend.config"
 terraform -chdir=infra apply -auto-approve -var-file="env/${env}.tfvars"
