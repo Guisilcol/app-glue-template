@@ -35,6 +35,12 @@ if ! command -v terraform > /dev/null 2>&1; then
     exit 1
 fi
 
+# Verifica se o GitHub CLI (gh) está instalado
+if ! command -v gh > /dev/null 2>&1; then
+    echo "CICD: Erro: GitHub CLI (gh) não está instalado. Por favor, instale o gh antes de executar este script."
+    exit 1
+fi
+
 # Configura as variáveis de ambiente da AWS
 export AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id --profile "$profile")
 export AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key --profile "$profile")
@@ -78,6 +84,10 @@ if ! git ls-remote --heads origin "$current_branch" > /dev/null 2>&1; then
     git push -u origin "$current_branch"
 fi
 
+##############################
+# Criação de Pull Request com Auto-Aprovação
+##############################
+
 if [ "$env" == "dev" ]; then
     # Para deploy no ambiente dev, a branch atual NÃO deve ser 'dev' nem 'master'
     if [ "$current_branch" == "dev" ] || [ "$current_branch" == "master" ]; then
@@ -85,13 +95,16 @@ if [ "$env" == "dev" ]; then
         exit 1
     fi
 
-    echo "CICD: Realizando merge da branch '$current_branch' na branch 'dev'..."
-    git checkout dev
-    git merge "$current_branch" --no-ff -m "Merge da branch '$current_branch' para deploy na dev"
-    git push origin dev
+    echo "CICD: Criando pull request da branch '$current_branch' para a branch 'dev'..."
+    pr_url=$(gh pr create --base dev --head "$current_branch" \
+      --title "PR: Deploy da branch '$current_branch' para dev" \
+      --body "PR criada automaticamente para deploy no ambiente dev." )
+    echo "CICD: Pull request criado: $pr_url"
     
-    # Retorna para a branch original (opcional)
-    git checkout "$current_branch"
+    echo "CICD: Configurando auto-merge (auto-aprovação)..."
+    # O flag --merge indica que será feito merge commit, similar ao --no-ff.
+    gh pr merge "$pr_url" --auto --merge
+    echo "CICD: Pull request aprovado e merge realizado automaticamente."
 
 elif [ "$env" == "prd" ]; then
     # Para deploy no ambiente prd (produção/master), a branch atual deve ser 'dev'
@@ -100,13 +113,15 @@ elif [ "$env" == "prd" ]; then
         exit 1
     fi
 
-    echo "CICD: Realizando merge da branch 'dev' na branch 'master'..."
-    git checkout master
-    git merge dev --no-ff -m "Merge da branch 'dev' para deploy em produção (master)"
-    git push origin master
+    echo "CICD: Criando pull request da branch 'dev' para a branch 'master'..."
+    pr_url=$(gh pr create --base master --head dev \
+      --title "PR: Deploy da branch 'dev' para produção" \
+      --body "PR criada automaticamente para deploy em produção." )
+    echo "CICD: Pull request criado: $pr_url"
     
-    # Retorna para a branch 'dev' (opcional)
-    git checkout dev
+    echo "CICD: Configurando auto-merge (auto-aprovação)..."
+    gh pr merge "$pr_url" --auto --merge
+    echo "CICD: Pull request aprovado e merge realizado automaticamente."
 fi
 
 ##############################
