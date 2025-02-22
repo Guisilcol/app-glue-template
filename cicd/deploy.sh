@@ -19,25 +19,25 @@ fi
 
 # Validação se o perfil informado existe
 if ! aws configure list-profiles | grep -q "^${profile}\$"; then
-    echo "CICD: Erro: O perfil AWS CLI '$profile' não foi encontrado. Por favor, configure-o antes de executar este script."
+    echo "CICD: Erro: O perfil AWS CLI '$profile' não foi encontrado. Configure-o antes de executar este script."
     exit 1
 fi
 
 # Verifica se o AWS CLI está instalado
 if ! aws --version > /dev/null 2>&1; then
-    echo "CICD: Erro: AWS CLI não está instalado. Por favor, instale o AWS CLI antes de executar este script."
+    echo "CICD: Erro: AWS CLI não está instalado. Instale o AWS CLI antes de executar este script."
     exit 1
 fi
 
 # Verifica se o Terraform está instalado
 if ! command -v terraform > /dev/null 2>&1; then
-    echo "CICD: Erro: Terraform não está instalado. Por favor, instale o Terraform antes de executar este script."
+    echo "CICD: Erro: Terraform não está instalado. Instale o Terraform antes de executar este script."
     exit 1
 fi
 
 # Verifica se o GitHub CLI (gh) está instalado
 if ! command -v gh > /dev/null 2>&1; then
-    echo "CICD: Erro: GitHub CLI (gh) não está instalado. Por favor, instale o gh antes de executar este script."
+    echo "CICD: Erro: GitHub CLI (gh) não está instalado. Instale o gh antes de executar este script."
     exit 1
 fi
 
@@ -59,16 +59,16 @@ echo "CICD: Limpeza concluída."
 # Integração com o Git
 ##############################
 
-# Garante que as branches 'dev' e 'master' existam; se não existirem, cria-as e publica automaticamente
+# Garante que as branches 'dev' e 'master' existam; se não, cria-as e publica automaticamente
 if ! git show-ref --verify --quiet refs/heads/dev; then
-    echo "CICD: A branch 'dev' não existe. Criando a branch 'dev'..."
+    echo "CICD: A branch 'dev' não existe. Criando-a..."
     git branch dev
     echo "CICD: Publicando a branch 'dev'..."
     git push -u origin dev
 fi
 
 if ! git show-ref --verify --quiet refs/heads/master; then
-    echo "CICD: A branch 'master' não existe. Criando a branch 'master'..."
+    echo "CICD: A branch 'master' não existe. Criando-a..."
     git branch master
     echo "CICD: Publicando a branch 'master'..."
     git push -u origin master
@@ -78,39 +78,55 @@ fi
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 echo "CICD: Branch atual: $current_branch"
 
-# Verifica se a branch atual já está publicada no repositório remoto; se não, publica-a automaticamente
+# Publica a branch atual, se ainda não estiver no remoto
 if ! git ls-remote --heads origin "$current_branch" > /dev/null 2>&1; then
-    echo "CICD: A branch '$current_branch' não está publicada no repositório remoto. Publicando..."
+    echo "CICD: A branch '$current_branch' não está publicada no remoto. Publicando..."
     git push -u origin "$current_branch"
 fi
 
 ##############################
-# Criação de Pull Request (sem auto-merge)
+# Merge sem commit extra (Fast-Forward Merge)
 ##############################
 if [ "$env" == "dev" ]; then
-    # Para deploy no ambiente dev, a branch atual NÃO deve ser 'dev' nem 'master'
+    # Para deploy em dev, a branch atual não pode ser 'dev' ou 'master'
     if [ "$current_branch" == "dev" ] || [ "$current_branch" == "master" ]; then
-        echo "CICD: Erro: Para deploy no ambiente dev, a branch atual deve ser diferente de 'dev' ou 'master'."
+        echo "CICD: Erro: Para deploy em dev, a branch atual deve ser diferente de 'dev' ou 'master'."
         exit 1
     fi
 
-    echo "CICD: Criando pull request da branch '$current_branch' para a branch 'dev'..."
-    pr_url=$(gh pr create --base dev --head "$current_branch" \
-      --title "PR: Deploy da branch '$current_branch' para dev" \
-      --body "PR criada automaticamente para deploy no ambiente dev." )
-    echo "CICD: Pull request criado: $pr_url"
+    echo "CICD: Fazendo merge da branch '$current_branch' na branch 'dev'..."
+    # Tenta fast-forward merge
+    git checkout dev
+    if ! git merge --ff-only "$current_branch"; then
+        echo "CICD: Fast-forward não possível. Realizando rebase da branch '$current_branch' sobre 'dev'..."
+        git checkout "$current_branch"
+        git rebase dev
+        git checkout dev
+        git merge --ff-only "$current_branch"
+    fi
+    git push origin dev
+    # Retorna para a branch original
+    git checkout "$current_branch"
+
 elif [ "$env" == "prd" ]; then
-    # Para deploy no ambiente prd (produção/master), a branch atual deve ser 'dev'
+    # Para deploy em prd, a branch atual deve ser 'dev'
     if [ "$current_branch" != "dev" ]; then
-        echo "CICD: Erro: Para deploy no ambiente prd (master), a branch atual deve ser 'dev'."
+        echo "CICD: Erro: Para deploy em prd (master), a branch atual deve ser 'dev'."
         exit 1
     fi
 
-    echo "CICD: Criando pull request da branch 'dev' para a branch 'master'..."
-    pr_url=$(gh pr create --base master --head dev \
-      --title "PR: Deploy da branch 'dev' para produção" \
-      --body "PR criada automaticamente para deploy em produção." )
-    echo "CICD: Pull request criado: $pr_url"
+    echo "CICD: Fazendo merge da branch 'dev' na branch 'master'..."
+    git checkout master
+    if ! git merge --ff-only dev; then
+        echo "CICD: Fast-forward não possível. Realizando rebase da branch 'dev' sobre 'master'..."
+        git checkout dev
+        git rebase master
+        git checkout master
+        git merge --ff-only dev
+    fi
+    git push origin master
+    # Retorna para a branch 'dev'
+    git checkout dev
 fi
 
 ##############################
