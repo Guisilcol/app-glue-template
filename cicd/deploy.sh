@@ -92,4 +92,76 @@ git config pull.rebase true
 # Merge sem commit extra (Fast-Forward Merge)
 ##############################
 if [ "$env" == "dev" ]; then
-    # Para deploy em dev, a branch atual não pode ser 'dev' nem 'm
+    # Para deploy em dev, a branch atual não pode ser 'dev' nem 'master'
+    if [ "$current_branch" == "dev" ] || [ "$current_branch" == "master" ]; then
+        echo "CICD: Erro: Para deploy em dev, a branch atual deve ser diferente de 'dev' ou 'master'."
+        exit 1
+    fi
+
+    echo "CICD: Fazendo merge da branch '$current_branch' na branch 'dev'..."
+    # Atualiza a branch dev com as mudanças remotas
+    git checkout dev
+    git pull --rebase origin dev
+
+    if ! git merge --ff-only "$current_branch"; then
+        echo "CICD: Fast-forward não possível. Realizando rebase da branch '$current_branch' sobre 'dev'..."
+        git checkout "$current_branch"
+        git rebase dev
+        git checkout dev
+        git merge --ff-only "$current_branch"
+    fi
+
+    if ! git push origin dev; then
+        echo "CICD: Push reprovado. Atualizando branch dev e tentando novamente..."
+        git pull --rebase origin dev
+        git push origin dev
+    fi
+
+    # Atualiza a branch de feature para ficar sincronizada com dev, sem deletá-la
+    echo "CICD: Atualizando a branch '$current_branch' para sincronizar com 'dev'..."
+    git checkout "$current_branch"
+    git reset --hard dev
+    git push origin "$current_branch" --force
+
+elif [ "$env" == "prd" ]; then
+    # Para deploy em prd, a branch atual deve ser 'dev'
+    if [ "$current_branch" != "dev" ]; then
+        echo "CICD: Erro: Para deploy em prd (master), a branch atual deve ser 'dev'."
+        exit 1
+    fi
+
+    echo "CICD: Fazendo merge da branch 'dev' na branch 'master'..."
+    # Atualiza a branch master com as mudanças remotas
+    git checkout master
+    git pull --rebase origin master
+
+    # Atualiza a branch dev e rebaseia-a sobre master para alinhá-las
+    git checkout dev
+    git pull --rebase origin dev
+    git rebase master
+
+    # Volta para master e faz merge fast-forward de dev
+    git checkout master
+    if ! git merge --ff-only dev; then
+        echo "CICD: Fast-forward não possível mesmo após rebase."
+        exit 1
+    fi
+
+    if ! git push origin master; then
+        echo "CICD: Push reprovado. Atualizando branch master e tentando novamente..."
+        git pull --rebase origin master
+        git push origin master
+    fi
+
+    # Após o merge, atualiza a branch dev para que fique exatamente igual à master
+    git checkout dev
+    git reset --hard master
+    git push origin dev --force
+fi
+
+##############################
+# Deploy via Terraform
+##############################
+echo "CICD: Inicializando e aplicando o Terraform para o ambiente '$env'..."
+terraform -chdir=infra init -reconfigure -backend-config="env/${env}.backend.config"
+terraform -chdir=infra apply -auto-approve -var-file="env/${env}.tfvars"
