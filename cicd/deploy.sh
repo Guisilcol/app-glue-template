@@ -117,12 +117,14 @@ if [ "$env" == "dev" ]; then
         git push origin dev
     fi
 
-    # Depois do merge, para evitar divergência, exclui a branch feature
-    echo "CICD: Deletando a branch '$current_branch', pois já foi mergeada em dev..."
-    # Primeiro, troca para a branch dev para não estar na branch que será deletada
-    git checkout dev
-    git branch -d "$current_branch"
-    git push origin --delete "$current_branch"
+    # Em vez de deletar a branch de feature, atualizamos ela para que fique sincronizada com dev
+    echo "CICD: Atualizando a branch '$current_branch' para sincronizar com 'dev'..."
+    git checkout "$current_branch"
+    git reset --hard dev
+    git push origin "$current_branch" --force
+
+    # Retorna para a branch original (feature)
+    git checkout "$current_branch"
 
 elif [ "$env" == "prd" ]; then
     # Para deploy em prd, a branch atual deve ser 'dev'
