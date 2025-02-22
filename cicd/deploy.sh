@@ -78,37 +78,38 @@ fi
 ##############################
 # Atualiza proteção da branch de destino para auto-merge
 ##############################
-# Função para configurar a proteção da branch
 update_branch_protection() {
   branch=$1
   echo "CICD: Atualizando regras de proteção para a branch '$branch'..."
-  gh api --method PUT \
+  json_body=$(cat <<EOF
+{
+  "required_status_checks": {
+     "strict": true,
+     "contexts": []
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+     "dismiss_stale_reviews": true,
+     "require_code_owner_reviews": false,
+     "required_approving_review_count": 1
+  },
+  "restrictions": null
+}
+EOF
+)
+  echo "$json_body" | gh api --method PUT \
     -H "Accept: application/vnd.github+json" \
     /repos/"$repo_path"/branches/"$branch"/protection \
-    -d '{
-      "required_status_checks": {
-         "strict": true,
-         "contexts": []
-      },
-      "enforce_admins": true,
-      "required_pull_request_reviews": {
-         "dismiss_stale_reviews": true,
-         "require_code_owner_reviews": false,
-         "required_approving_review_count": 1
-      },
-      "restrictions": null
-    }'
+    --input -
   echo "CICD: Regras de proteção atualizadas para a branch '$branch'."
 }
 
-# Define a branch de destino com base no ambiente
 if [ "$env" == "dev" ]; then
     target_branch="dev"
 elif [ "$env" == "prd" ]; then
     target_branch="master"
 fi
 
-# Atualiza a proteção da branch de destino para permitir auto-merge
 if [ -n "$repo_path" ]; then
     update_branch_protection "$target_branch"
 fi
