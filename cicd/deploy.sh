@@ -84,6 +84,10 @@ if ! git ls-remote --heads origin "$current_branch" > /dev/null 2>&1; then
     git push -u origin "$current_branch"
 fi
 
+# Configura o comportamento do pull para usar rebase, evitando conflitos por branches divergentes
+echo "CICD: Configurando o comportamento do pull para usar rebase..."
+git config pull.rebase true
+
 ##############################
 # Merge sem commit extra (Fast-Forward Merge)
 ##############################
