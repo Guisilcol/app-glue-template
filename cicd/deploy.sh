@@ -56,7 +56,7 @@ find . -type d -name "__pycache__" -exec rm -rf {} +
 echo "CICD: Limpeza concluída."
 
 ##############################
-# Configuração do repositório para auto-merge
+# Configuração do repositório para permitir auto-merge
 ##############################
 echo "CICD: Configurando o repositório para permitir auto-merge..."
 remote_url=$(git remote get-url origin)
@@ -73,6 +73,44 @@ if [ -n "$repo_path" ]; then
     echo "CICD: Habilitando auto-merge no repositório $repo_path..."
     gh api -X PATCH /repos/"$repo_path" -f allow_auto_merge=true
     echo "CICD: Auto-merge habilitado para o repositório $repo_path."
+fi
+
+##############################
+# Atualiza proteção da branch de destino para auto-merge
+##############################
+# Função para configurar a proteção da branch
+update_branch_protection() {
+  branch=$1
+  echo "CICD: Atualizando regras de proteção para a branch '$branch'..."
+  gh api --method PUT \
+    -H "Accept: application/vnd.github+json" \
+    /repos/"$repo_path"/branches/"$branch"/protection \
+    -d '{
+      "required_status_checks": {
+         "strict": true,
+         "contexts": []
+      },
+      "enforce_admins": true,
+      "required_pull_request_reviews": {
+         "dismiss_stale_reviews": true,
+         "require_code_owner_reviews": false,
+         "required_approving_review_count": 1
+      },
+      "restrictions": null
+    }'
+  echo "CICD: Regras de proteção atualizadas para a branch '$branch'."
+}
+
+# Define a branch de destino com base no ambiente
+if [ "$env" == "dev" ]; then
+    target_branch="dev"
+elif [ "$env" == "prd" ]; then
+    target_branch="master"
+fi
+
+# Atualiza a proteção da branch de destino para permitir auto-merge
+if [ -n "$repo_path" ]; then
+    update_branch_protection "$target_branch"
 fi
 
 ##############################
