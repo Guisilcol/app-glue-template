@@ -88,15 +88,17 @@ fi
 # Merge sem commit extra (Fast-Forward Merge)
 ##############################
 if [ "$env" == "dev" ]; then
-    # Para deploy em dev, a branch atual não pode ser 'dev' ou 'master'
+    # Para deploy em dev, a branch atual não pode ser 'dev' nem 'master'
     if [ "$current_branch" == "dev" ] || [ "$current_branch" == "master" ]; then
         echo "CICD: Erro: Para deploy em dev, a branch atual deve ser diferente de 'dev' ou 'master'."
         exit 1
     fi
 
     echo "CICD: Fazendo merge da branch '$current_branch' na branch 'dev'..."
-    # Tenta fast-forward merge
+    # Atualiza a branch dev com as mudanças remotas
     git checkout dev
+    git pull --rebase origin dev
+
     if ! git merge --ff-only "$current_branch"; then
         echo "CICD: Fast-forward não possível. Realizando rebase da branch '$current_branch' sobre 'dev'..."
         git checkout "$current_branch"
@@ -104,7 +106,13 @@ if [ "$env" == "dev" ]; then
         git checkout dev
         git merge --ff-only "$current_branch"
     fi
-    git push origin dev
+
+    if ! git push origin dev; then
+        echo "CICD: Push reprovado. Atualizando branch dev e tentando novamente..."
+        git pull --rebase origin dev
+        git push origin dev
+    fi
+
     # Retorna para a branch original
     git checkout "$current_branch"
 
@@ -117,6 +125,8 @@ elif [ "$env" == "prd" ]; then
 
     echo "CICD: Fazendo merge da branch 'dev' na branch 'master'..."
     git checkout master
+    git pull --rebase origin master
+
     if ! git merge --ff-only dev; then
         echo "CICD: Fast-forward não possível. Realizando rebase da branch 'dev' sobre 'master'..."
         git checkout dev
@@ -124,7 +134,13 @@ elif [ "$env" == "prd" ]; then
         git checkout master
         git merge --ff-only dev
     fi
-    git push origin master
+
+    if ! git push origin master; then
+        echo "CICD: Push reprovado. Atualizando branch master e tentando novamente..."
+        git pull --rebase origin master
+        git push origin master
+    fi
+
     # Retorna para a branch 'dev'
     git checkout dev
 fi
