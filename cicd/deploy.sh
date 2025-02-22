@@ -56,6 +56,26 @@ find . -type d -name "__pycache__" -exec rm -rf {} +
 echo "CICD: Limpeza concluída."
 
 ##############################
+# Configuração do repositório para auto-merge
+##############################
+echo "CICD: Configurando o repositório para permitir auto-merge..."
+remote_url=$(git remote get-url origin)
+if [[ "$remote_url" == git@github.com:* ]]; then
+    repo_path=$(echo "$remote_url" | sed -e 's/git@github.com://g' -e 's/\.git$//')
+elif [[ "$remote_url" == https://github.com/* ]]; then
+    repo_path=$(echo "$remote_url" | sed -e 's/https:\/\/github.com\///g' -e 's/\.git$//')
+else
+    echo "CICD: Aviso: URL do repositório não reconhecida. Auto-merge não configurado."
+    repo_path=""
+fi
+
+if [ -n "$repo_path" ]; then
+    echo "CICD: Habilitando auto-merge no repositório $repo_path..."
+    gh api -X PATCH /repos/"$repo_path" -f allow_auto_merge=true
+    echo "CICD: Auto-merge habilitado para o repositório $repo_path."
+fi
+
+##############################
 # Integração com o Git
 ##############################
 
@@ -87,7 +107,6 @@ fi
 ##############################
 # Criação de Pull Request com Auto-Aprovação
 ##############################
-
 if [ "$env" == "dev" ]; then
     # Para deploy no ambiente dev, a branch atual NÃO deve ser 'dev' nem 'master'
     if [ "$current_branch" == "dev" ] || [ "$current_branch" == "master" ]; then
@@ -102,7 +121,6 @@ if [ "$env" == "dev" ]; then
     echo "CICD: Pull request criado: $pr_url"
     
     echo "CICD: Configurando auto-merge (auto-aprovação)..."
-    # O flag --merge indica que será feito merge commit, similar ao --no-ff.
     gh pr merge "$pr_url" --auto --merge
     echo "CICD: Pull request aprovado e merge realizado automaticamente."
 
