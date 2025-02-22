@@ -84,7 +84,7 @@ if ! git ls-remote --heads origin "$current_branch" > /dev/null 2>&1; then
     git push -u origin "$current_branch"
 fi
 
-# Configura o comportamento do pull para usar rebase, evitando conflitos por branches divergentes
+# Configura o comportamento do pull para usar rebase
 echo "CICD: Configurando o comportamento do pull para usar rebase..."
 git config pull.rebase true
 
@@ -117,8 +117,12 @@ if [ "$env" == "dev" ]; then
         git push origin dev
     fi
 
-    # Retorna para a branch original
-    git checkout "$current_branch"
+    # Depois do merge, para evitar divergência, exclui a branch feature
+    echo "CICD: Deletando a branch '$current_branch', pois já foi mergeada em dev..."
+    # Primeiro, troca para a branch dev para não estar na branch que será deletada
+    git checkout dev
+    git branch -d "$current_branch"
+    git push origin --delete "$current_branch"
 
 elif [ "$env" == "prd" ]; then
     # Para deploy em prd, a branch atual deve ser 'dev'
